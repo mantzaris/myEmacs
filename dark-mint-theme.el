@@ -28,7 +28,7 @@
  '(mouse ((t (:foregound "#000000"))))
  '(fringe ((t (:background "black" :foreground "green"))))
  '(cursor ((t (:foregound "#000000"))))
- '(border ((t (:foregound "black"))))
+ '(border ((t (:foregound "purple"))))
 
 
  '(mode-line ((t (:background "black" :foreground "green"))))
@@ -36,6 +36,16 @@
  '(Man-underline-face ((t (:underline t))))
  '(apropos-keybinding-face ((t (:underline t))))
  '(apropos-label-face ((t (:italic t))))
+;;; Alex include for scroll-bar
+;;;'(scroll-bar ((t (:background "green"))))
+;;; '(mode-line ((t (:background "white"))))
+ '(mode-line-inactive ((t (:background "#333333"))))
+;;; '(mode-line-active ((t (:background "green"))))
+'(mode-line-emphasis ((t (:background "blue"))))
+;;;'(mode-line-buffer-id ((t (:background "pink"))))
+;;;'(mode-line-highlight ((t (:background "yellow"))))
+
+
 
  '(font-lock-type-face ((t (:foreground "light slate blue"))))
  '(font-lock-comment-face ((t (:foreground "MintCream"))))
