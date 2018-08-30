@@ -15,7 +15,8 @@
 
 (load-theme 'dark-mint t)
 
-
+;; for documents like PDF to load automatically once updated, can be a potential hazard but the need for me on updates is more important
+(add-hook 'doc-view-mode-hook 'auto-revert-mode)
 
 
 
