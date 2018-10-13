@@ -15,12 +15,16 @@
 
 (load-theme 'dark-mint t)
 
+;; default font
+(set-default-font "Monospace 14")
+
+
 ;; for documents like PDF to load automatically once updated, can be a potential hazard but the need for me on updates is more important
 (add-hook 'doc-view-mode-hook 'auto-revert-mode)
 
 ;;when editing a pdf from latex the dynamic update on the pdf incurs changes, emacs attempts to store these changes but it is too big, and reports that it can't but we don't care so we should not see this warning as it is annoying obvious and not a problem
 ;;doc-view-mode is a major mode then doc-view-mode-hook
-(add-hook 'doc-view-mode-hook 'buffer-disable-undo)
+;;(add-hook 'doc-view-mode-hook 'buffer-disable-undo)
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
