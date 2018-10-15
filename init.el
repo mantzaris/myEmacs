@@ -1,6 +1,6 @@
 (add-to-list 'load-path "./")
-(add-to-list 'load-path "~/.emacs.d/")
-(add-to-list 'load-path "/home/al062959/.emacs.d/")
+;;(add-to-list 'load-path "~/.emacs.d/init.el")
+;;(add-to-list 'load-path "/home/al062959/.emacs.d/")
 (require 'julia-mode)
 
 (tool-bar-mode 0)
@@ -40,3 +40,9 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  )
+
+
+
+(add-hook 'emacs-startup-hook switch-to-buffer "*shell*")
+;;(setq delete-other-windows)
+
