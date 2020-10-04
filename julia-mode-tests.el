@@ -88,6 +88,8 @@ matching line or end of match if END is non-nil.  Optional ARG is passed to FUN.
                                       (point-at-bol)))
                            ,to)))))
 
+;;; indent tests
+
 (ert-deftest julia--test-indent-if ()
   "We should indent inside if bodies."
   (julia--should-indent
@@ -262,7 +264,14 @@ qux"
 foo() |>
     bar |>
     baz
-qux"))
+qux")
+  (julia--should-indent
+   "x \\
+y \\
+z"
+   "x \\
+    y \\
+    z"))
 
 (ert-deftest julia--test-indent-ignores-blank-lines ()
   "Blank lines should not affect indentation of non-blank lines."
@@ -396,13 +405,13 @@ end"))
 (ert-deftest julia--test-backslash-indent ()
   "indentation for function(args...)"
   (julia--should-indent
-   "(\)
+   "(\\)
    1
-   (:\)
+   (:\\)
        1"
-   "(\)
+   "(\\)
 1
-(:\)
+(:\\)
 1"))
 
 (ert-deftest julia--test-indent-keyword-paren ()
@@ -425,6 +434,67 @@ function( i=1:2 )
         end
     end
 end")
+
+(ert-deftest julia--test-indent-ignore-:end-as-block-ending ()
+  "Do not consider `:end` as a block ending."
+  (julia--should-indent
+   "if a == :end
+r = 1
+end"
+   "if a == :end
+    r = 1
+end")
+
+  (julia--should-indent
+   "if a == a[end-4:end]
+r = 1
+end"
+   "if a == a[end-4:end]
+    r = 1
+end")
+  )
+
+(ert-deftest julia--test-indent-hanging ()
+  "Test indentation for line following a hanging operator."
+  (julia--should-indent
+   "
+f(x) =
+x*
+x"
+   "
+f(x) =
+    x*
+    x")
+  (julia--should-indent
+   "
+a = \"#\" |>
+identity"
+   "
+a = \"#\" |>
+    identity")
+  ;; make sure we don't interpret a hanging operator in a comment as
+  ;; an actual hanging operator for indentation
+  (julia--should-indent
+   "
+a = \"#\" # |>
+identity"
+   "
+a = \"#\" # |>
+identity"))
+
+(ert-deftest julia--test-indent-quoted-single-quote ()
+  "We should indent after seeing a character constant containing a single quote character."
+  (julia--should-indent "
+if c in ('\'')
+s = \"$c$c\"*string[startpos:pos]
+end
+" "
+if c in ('\'')
+    s = \"$c$c\"*string[startpos:pos]
+end
+"))
+
+;;; font-lock tests
 
 (ert-deftest julia--test-symbol-font-locking-at-bol ()
   "Symbols get font-locked at beginning or line."
@@ -465,6 +535,114 @@ end")
       (julia--should-font-lock string pos font-lock-string-face))
     (julia--should-font-lock string (length string) font-lock-keyword-face)))
 
+(ert-deftest julia--test-ternary-font-lock ()
+  "? and : in ternary expression font-locked as keywords"
+  (let ((string "true ? 1 : 2"))
+    (julia--should-font-lock string 6 font-lock-keyword-face)
+    (julia--should-font-lock string 10 font-lock-keyword-face))
+  (let ((string "true ?\n    1 :\n    2"))
+    (julia--should-font-lock string 6 font-lock-keyword-face)
+    (julia--should-font-lock string 14 font-lock-keyword-face)))
+
+(ert-deftest julia--test-forloop-font-lock ()
+  "for and in/=/∈ font-locked as keywords in loops and comprehensions"
+  (let ((string "for i=1:10\nprintln(i)\nend"))
+    (julia--should-font-lock string 1 font-lock-keyword-face)
+    (julia--should-font-lock string 6 font-lock-keyword-face))
+  (let ((string "for i in 1:10\nprintln(i)\nend"))
+    (julia--should-font-lock string 3 font-lock-keyword-face)
+    (julia--should-font-lock string 7 font-lock-keyword-face))
+  (let ((string "for i∈1:10\nprintln(i)\nend"))
+    (julia--should-font-lock string 2 font-lock-keyword-face)
+    (julia--should-font-lock string 6 font-lock-keyword-face))
+  (let ((string "[i for i in 1:10]"))
+    (julia--should-font-lock string 4 font-lock-keyword-face)
+    (julia--should-font-lock string 10 font-lock-keyword-face))
+  (let ((string "(i for i in 1:10)"))
+    (julia--should-font-lock string 4 font-lock-keyword-face)
+    (julia--should-font-lock string 10 font-lock-keyword-face))
+  (let ((string "[i for i ∈ 1:15 if w(i) == 15]"))
+    (julia--should-font-lock string 4 font-lock-keyword-face)
+    (julia--should-font-lock string 10 font-lock-keyword-face)
+    (julia--should-font-lock string 17 font-lock-keyword-face)
+    (julia--should-font-lock string 25 nil)
+    (julia--should-font-lock string 26 nil)))
+
+(ert-deftest julia--test-typeparams-font-lock ()
+  (let ((string "@with_kw struct Foo{A <: AbstractThingy, B <: Tuple}\n    bar::A\n    baz::B\nend"))
+    (julia--should-font-lock string 30 font-lock-type-face) ; AbstractThingy
+    (julia--should-font-lock string 50 font-lock-type-face) ; Tuple
+    (julia--should-font-lock string 63 font-lock-type-face) ; A
+    (julia--should-font-lock string 74 font-lock-type-face) ; B
+    ))
+
+(ert-deftest julia--test-single-quote-string-font-lock ()
+  "Test that single quoted strings are font-locked correctly even with escapes."
+  ;; Issue #15
+  (let ((s1 "\"a\\\"b\"c"))
+    (julia--should-font-lock s1 2 font-lock-string-face)
+    (julia--should-font-lock s1 5 font-lock-string-face)
+    (julia--should-font-lock s1 7 nil)))
+
+(ert-deftest julia--test-triple-quote-string-font-lock ()
+  "Test that triple quoted strings are font-locked correctly even with escapes."
+  ;; Issue #15
+  (let ((s1 "\"\"\"a\\\"\\\"\"b\"\"\"d")
+        (s2 "\"\"\"a\\\"\"\"b\"\"\"d")
+        (s3 "\"\"\"a```b\"\"\"d")
+        (s4 "\\\"\"\"a\\\"\"\"b\"\"\"d")
+        (s5 "\"\"\"a\\\"\"\"\"b"))
+    (julia--should-font-lock s1 4 font-lock-string-face)
+    (julia--should-font-lock s1 10 font-lock-string-face)
+    (julia--should-font-lock s1 14 nil)
+    (julia--should-font-lock s2 4 font-lock-string-face)
+    (julia--should-font-lock s2 9 font-lock-string-face)
+    (julia--should-font-lock s2 13 nil)
+    (julia--should-font-lock s3 4 font-lock-string-face)
+    (julia--should-font-lock s3 8 font-lock-string-face)
+    (julia--should-font-lock s3 12 nil)
+    (julia--should-font-lock s4 5 font-lock-string-face)
+    (julia--should-font-lock s4 10 font-lock-string-face)
+    (julia--should-font-lock s4 14 nil)
+    (julia--should-font-lock s5 4 font-lock-string-face)
+    (julia--should-font-lock s5 10 nil)))
+
+(ert-deftest julia--test-triple-quote-cmd-font-lock ()
+  "Test that triple-quoted cmds are font-locked correctly even with escapes."
+  (let ((s1 "```a\\`\\``b```d")
+        (s2 "```a\\```b```d")
+        (s3 "```a\"\"\"b```d")
+        (s4 "\\```a\\```b```d"))
+    (julia--should-font-lock s1 4 font-lock-string-face)
+    (julia--should-font-lock s1 10 font-lock-string-face)
+    (julia--should-font-lock s1 14 nil)
+    (julia--should-font-lock s2 4 font-lock-string-face)
+    (julia--should-font-lock s2 9 font-lock-string-face)
+    (julia--should-font-lock s2 13 nil)
+    (julia--should-font-lock s3 4 font-lock-string-face)
+    (julia--should-font-lock s3 8 font-lock-string-face)
+    (julia--should-font-lock s3 12 nil)
+    (julia--should-font-lock s4 5 font-lock-string-face)
+    (julia--should-font-lock s4 10 font-lock-string-face)
+    (julia--should-font-lock s4 14 nil)))
+
+(ert-deftest julia--test-ccall-font-lock ()
+  (let ((s1 "t = ccall(:clock, Int32, ())"))
+    (julia--should-font-lock s1 5 font-lock-builtin-face)
+    (julia--should-font-lock s1 4 nil)
+    (julia--should-font-lock s1 10 nil)))
+
+(ert-deftest julia--test-char-const-font-lock ()
+  (dolist (c '("'\\''" "'\\\"'" "'\\\\'" "'\\010'" "'\\xfe'" "'\\uabcd'" 
+               "'\\Uabcdef01'" "'\\n'" "'a'" "'z'" "'''"))
+    (let ((c (format " %s " c)))
+      (progn
+        (julia--should-font-lock c 1 nil)
+        (julia--should-font-lock c 2 font-lock-string-face)
+        (julia--should-font-lock c (- (length c) 1) font-lock-string-face)
+        (julia--should-font-lock c (length c) nil)
+    ))))
+
 ;;; Movement
 (ert-deftest julia--test-beginning-of-defun-assn-1 ()
   "Point moves to beginning of single-line assignment function."
@@ -475,8 +653,8 @@ end")
   "Point moves to beginning of multi-line assignment function."
   (julia--should-move-point
     "f(x)=
-x*
-x" 'beginning-of-defun "\\*\nx" 1))
+    x*
+    x" 'beginning-of-defun "x$" 1))
 
 (ert-deftest julia--test-beginning-of-defun-assn-3 ()
   "Point moves to beginning of multi-line assignment function adjoining
@@ -515,7 +693,7 @@ y*y" 'beginning-of-defun "y\\*y" 1 nil 2))
     "macro current_module()
 return VERSION >= v\"0.7-\" :(@__MODULE__) : :(current_module())))
 end" 'beginning-of-defun "@" 1))
-  
+
 (ert-deftest julia--test-beginning-of-defun-1 ()
   "Point moves to beginning of defun in 'function's."
   (julia--should-move-point
@@ -594,6 +772,66 @@ end
 end
 return fact(x)
 end" 'end-of-defun "n == 0" "return fact(x)[ \n]+end" 'end 2))
+
+;;;
+;;; substitution tests
+;;;
+
+(defun julia--substitute (contents position)
+  "Call LaTeX subsitution in a buffer with `contents' at point
+`position', and return the resulting buffer."
+  (with-temp-buffer
+    (julia-mode)
+    (insert contents)
+    (goto-char position)
+    (julia-latexsub)
+    (buffer-string)))
+
+(ert-deftest julia--test-substitutions ()
+  (should (equal (julia--substitute "\\alpha " 7) "α "))
+  (should (equal (julia--substitute "x\\alpha " 8) "xα "))
+  (should (equal (julia--substitute "\\kappa\\alpha(" 13) "\\kappaα("))
+  (should (equal (julia--substitute "\\alpha" 7) "α"))
+  ; (should (equal (julia--substitute "\\alpha" 6) "α")) ; BROKEN
+  )
+
+;;; syntax-propertize-function tests
+
+(ert-deftest julia--test-triple-quoted-string-syntax ()
+  (with-temp-buffer
+    (julia-mode)
+    (insert "\"\"\"
+hello world
+\"\"\"")
+    ;; If triple-quoted strings improperly syntax-propertized as 3
+    ;; single-quoted strings, this will show string starting at pos 3
+    ;; instead of 1.
+    (should (= 1 (nth 8 (syntax-ppss 5))))))
+
+(ert-deftest julia--test-triple-quoted-cmd-syntax ()
+  (with-temp-buffer
+    (julia-mode)
+    (insert "```
+hello world
+```")
+    (should (= 1 (nth 8 (syntax-ppss 5))))))
+
+(ert-deftest julia--test-backslash-syntax ()
+  (with-temp-buffer
+    (julia-mode)
+    (insert "1 \\ 2
+\"hello\\nthere\"")
+    (syntax-propertize 20)
+    (should (equal
+             (string-to-syntax ".")
+             (syntax-after 3)))
+    (should (equal
+             (string-to-syntax "\\")
+             (syntax-after 13)))))
+
+;;;
+;;; run all tests
+;;;
 
 (defun julia--run-tests ()
   (interactive)
