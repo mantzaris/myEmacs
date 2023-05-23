@@ -1,30 +1,44 @@
-(add-to-list 'load-path "./")
-;;(add-to-list 'load-path "~/.emacs.d/init.el")
-;;(add-to-list 'load-path "/home/al062959/.emacs.d/")
-(require 'julia-mode)
+(add-to-list 'load-path "/home/tasty/.emacs.d/lisp/")
+(let ((base "~/.emacs.d/lisp/"))
+  (add-to-list 'load-path base)
+  (let ((default-directory base))
+    (normal-top-level-add-subdirs-to-load-path)))
 
+
+;; initialize package management
+(package-initialize)
+
+;;check for repositories being present and add if necessary
+(unless (assq 'gnu package-archives)
+  (add-to-list 'package-archives '("gnu" . "https://elpa.gnu.org/packages/")))
+(unless (assq 'melpa package-archives)
+  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/")))
+
+;; disable menu and toolbar
 (tool-bar-mode 0)
 (menu-bar-mode -1)
-
-
-(when (< emacs-major-version 24)
-  ;; For important compatibility libraries like cl-lib
-  (add-to-list 'package-archives '("gnu" . "http://elpa.gnu.org/packages/")
-	                          ("melpa" . "http://melpa.org/packages/")))
-(package-initialize) ;; You might already have this line
-
-(load-theme 'dark-mint t)
 
 ;; default font
 (set-default-font "Monospace 14")
 
 
+;; disable startup screen
+(setq inhibit-startup-screen t)
+;; empty scratch buffer
+(setq initial-scratch-message nil)
+;; load and switch to the scratch and delete other windows
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (switch-to-buffer "*scratch*")
+            (delete-other-windows)))
+
+
+;; load theme
+(load-theme 'dark-mint t)
+
 ;; for documents like PDF to load automatically once updated, can be a potential hazard but the need for me on updates is more important
 (add-hook 'doc-view-mode-hook 'auto-revert-mode)
 
-;;when editing a pdf from latex the dynamic update on the pdf incurs changes, emacs attempts to store these changes but it is too big, and reports that it can't but we don't care so we should not see this warning as it is annoying obvious and not a problem
-;;doc-view-mode is a major mode then doc-view-mode-hook
-;;(add-hook 'doc-view-mode-hook 'buffer-disable-undo)
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
@@ -42,7 +56,5 @@
  )
 
 
-
-(add-hook 'emacs-startup-hook switch-to-buffer "*shell*")
-;;(setq delete-other-windows)
+(require 'julia-mode)
 

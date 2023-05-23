@@ -31,16 +31,15 @@
  '(border ((t (:foregound "purple"))))
 
 
- '(mode-line ((t (:background "black" :foreground "green"))))
+ 
  '(Man-overstrike-face ((t (:weight bold))))
  '(Man-underline-face ((t (:underline t))))
  '(apropos-keybinding-face ((t (:underline t))))
  '(apropos-label-face ((t (:italic t))))
-;;; Alex include for scroll-bar
-;;;'(scroll-bar ((t (:background "green"))))
-;;; '(mode-line ((t (:background "white"))))
- '(mode-line-inactive ((t (:background "#333333"))))
-;;; '(mode-line-active ((t (:background "green"))))
+
+'(mode-line ((t (:background "#888888" :foreground "green"))))
+'(mode-line-inactive ((t (:background "#333333" :foreground "green"))))
+;;'(mode-line-active ((t (:background "gray" :foreground "green"))))
 '(mode-line-emphasis ((t (:background "blue"))))
 ;;;'(mode-line-buffer-id ((t (:background "pink"))))
 ;;;'(mode-line-highlight ((t (:background "yellow"))))
