@@ -58,4 +58,5 @@
 
 
 (require 'julia-mode)
+(load-file "dangermode.el")
 
