@@ -29,8 +29,9 @@
 ;; load and switch to the scratch and delete other windows
 (add-hook 'emacs-startup-hook
           (lambda ()
-            (switch-to-buffer "*scratch*")
-            (delete-other-windows)))
+            (unless (seq-filter 'buffer-file-name (buffer-list))
+              (switch-to-buffer "*scratch*")
+              (delete-other-windows))))
 
 
 ;; load theme
