@@ -58,5 +58,5 @@
 
 
 (require 'julia-mode)
-(load-file "dangermode.el")
+(load-file "~/.emacs.d/dangermode.el")
 
