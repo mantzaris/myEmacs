@@ -18,8 +18,11 @@
 (tool-bar-mode 0)
 (menu-bar-mode -1)
 
-;; default font
-(set-default-font "Monospace 14")
+;; Default font
+(if (fboundp 'set-frame-font)
+    (set-frame-font "Monospace 14" nil t)
+  (when (fboundp 'set-default-font)
+    (set-default-font "Monospace 14")))
 
 
 ;; disable startup screen
